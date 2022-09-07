@@ -1,0 +1,285 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-gH2yIJqKdNHPEq0n4Mqa/HGKIhSkIHeL5AyhkYV8i59U5AR6csBvApHHNl/vI1Bx" crossorigin="anonymous">
+        <link rel="stylesheet" type = "text/css" href="{{ url_for('static', filename='styles/style.css')}}">
+   
+        <link rel="stylesheet" type = "text/css" href="{{ url_for('static', filename='styles/style.css')}}">
+        
+    </head>
+    <body>
+        <div id = "top"><h1>Labjack Data</h1>
+            <div id = "buttonsdiv">
+            <button id="Configurations" class = 'relocate'>View Configurations</button>
+            <button id="config" class = 'relocate'>Change Configurations</button>
+            <button id="graph" class = 'relocate'>Graph</button>
+            <button id="export" class = 'relocate'>Export Data</button>
+        </div></div>
+        
+        <div><button id="startcollection">Start Data Collection</button></div>
+
+        <div><button id = "endcollection">End Data Collection</button></div>
+
+        <div><div><label for="starttime">Enter the start time:</label>
+        <input type = "datetime-local" step="1" name = "starttime" id = "starttime">
+    </div>
+        <div><label for="endtime">Enter the end-time:</label>
+        
+       <input type = "datetime-local" step="1" name = "endtime" id = "endtime"></div>
+       <div class = "error"></div>
+        <button id = "getsection">Graph a Section of Data</button>
+        </div>
+        
+
+        <div class = 'datagraph' id = 'data'></div>
+        <div class = 'datagraph' id = 'alldata'></div>
+        <div class = 'datagraph' id = 'sectiongraph'></div>
+    </body>
+    <script src = "https://cdn.plot.ly/plotly-2.12.1.min.js"></script>
+    <script src = "https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-A3rJD856KowSb7dwlZdYEkO39Gagi7vIsF0jrRAoQmDKKtQBHUuLZ9AsSv4jD4Xa" crossorigin="anonymous"></script>
+    <script>
+        "use strict";
+        var currenttime 
+        var startcollection = document.getElementById("startcollection");
+        var refreshIntervalId
+        startcollection.onclick = function (){
+            fetch('http://127.0.0.1:5000/startcollection')
+            var now = new Date();
+            var seconds = now.getTime();
+            currenttime = seconds/1000;
+            
+
+            
+            refreshIntervalId = setInterval(graphing,1000)
+            
+            function graphing(){
+            fetch(`http://127.0.0.1:5000/getdata?currenttime=${currenttime}`)
+            .then(function(response)
+                {
+                return response.json();
+                
+                }
+            )
+            .then(text => {
+                var normaltimes = {}
+                var data = []
+                function addtimes(){
+                    for (var time in text['times']){
+                        var inputtimes = []
+                        function converttimes(){
+                        for (var z=0;z<text['times'][time].length;z++){
+                            const mili = text['times'][time][z]*1000
+
+                            const dateObject = new Date(mili)
+                            inputtimes.push(dateObject)
+
+                        }
+                        return(inputtimes)
+                        }
+                        normaltimes[`${time}`] = converttimes();
+
+                      
+                        
+                        
+                    }
+                }
+                addtimes()
+                
+                
+                for (var input in text['inputs']){
+                
+                    var graphinput = {
+                        x: normaltimes[`${input}`],
+                        y: text['inputs'][`${input}`],
+                        name: `${input} (${text['units'][input]})`,
+                        mode:'lines',
+                        type:'scatter',
+                        text: normaltimes[`${input}`]
+                    };
+               
+
+                    
+                    data.push(graphinput);
+                }
+                var layout = {
+                    autosize: false,
+                    width:800, 
+                    height:500,
+                    margin:{
+                        l:50,
+                        r:50,
+                        b:100,
+                        t:100,
+                        pad:4
+                    }
+                }
+                Plotly.newPlot('data',data,layout);
+
+                var normaltimesfull = {}
+                
+                function addalltimes(){
+                    for (var time in text['fulltimes']){
+                        var inputtimes = []
+                        function convertalltimes(){
+                        for (var z=0;z<text['fulltimes'][time].length;z++){
+                            const mili = text['fulltimes'][time][z]*1000
+
+                            const dateObject = new Date(mili)
+                            inputtimes.push(dateObject)
+
+                        }
+                        return(inputtimes)
+                        }
+                        normaltimesfull[`${time}`] = convertalltimes();
+
+
+                        
+                    }
+                }
+                addalltimes()
+                var layout = {
+                    autosize: false,
+                    width:800, 
+                    height:500,
+                    margin:{
+                        l:50,
+                        r:50,
+                        b:100,
+                        t:100,
+                        pad:4
+                    }
+                }
+
+                var alldata = []
+                for (var input in text['inputsfull']){
+                    var graphallinput = {
+                        x: normaltimesfull[`${input}`],
+                        y: text['inputsfull'][`${input}`],
+                        name: `${input}(${text['units'][input]})`,
+                        type:'scatter',
+                        text: normaltimesfull
+                    };
+                    
+                    alldata.push(graphallinput);
+                }
+                Plotly.newPlot('alldata',alldata, layout);
+            });
+        }
+    }
+                
+
+        var getsection = document.getElementById("getsection");
+        
+        getsection.onclick = function(){
+            errorstatement("")
+            var starttime = (Date.parse(document.getElementById("starttime").value))/1000;
+            var endtime = (Date.parse(document.getElementById("endtime").value))/1000;
+
+            if (starttime>endtime){
+                errorstatement("Error: start time cannot be after end time")
+            }
+            // else if (document.getElementById("starttime").value =="")
+            // {
+            //     errorstatement("Error: Enter a start time")
+            // }
+            else{
+                if (document.getElementById("starttime").value =="")
+                {
+                    starttime=0
+                }
+                fetch(`http://127.0.0.1:5000/section?timestart=${starttime}&timeend=${endtime}`)
+                .then(function(sectiondata)
+                {
+                if (!sectiondata.ok){
+                    if (sectiondata.status==416){
+                        errorstatement("Error: No data in this time frame")
+    
+                    }
+                    else{
+                        errorstatement("Error: Invalid start time")
+                    console.log(sectiondata)
+                    }
+                }
+                return sectiondata.json();})
+                .then(jsonsectiondata => {
+                var normaltimes = {}
+                var data = []
+                function addtimes(){
+                    for (var time in jsonsectiondata['times']){
+                        var inputtimes = []
+                        function converttimes(){
+                        for (var z=0;z<jsonsectiondata['times'][time].length;z++){
+                            const mili = jsonsectiondata['times'][time][z]*1000
+                            const dateObject = new Date(mili)
+                            inputtimes.push(dateObject)
+                        }
+                        return(inputtimes)
+                        }
+                        normaltimes[`${time}`] = converttimes();
+                    }
+                }
+                addtimes()
+                for (var input in jsonsectiondata['inputs']){
+                    var graphinput = {
+                        x: normaltimes[`${input}`],//jsonsectiondata['times'],
+                        y: jsonsectiondata['inputs'][`${input}`],
+                        name: `${input}(${jsonsectiondata['units'][input]})`,
+                        mode:'lines',
+                        type:'scatter',
+                        text: normaltimes
+                        
+                    };
+                    data.push(graphinput);
+                }
+                var layout = {
+                    autosize: false,
+                    width:800, 
+                    height:500,
+                    margin:{
+                        l:50,
+                        r:50,
+                        b:100,
+                        t:100,
+                        pad:4
+                    }
+                }
+
+                Plotly.newPlot('sectiongraph',data,layout); 
+            })
+            }
+        }
+        function errorstatement(errorstr){
+            var error = document.getElementsByClassName('error')[0]
+            error.innerHTML =  errorstr
+        }
+        
+        var endcollection = document.getElementById("endcollection");
+    
+        endcollection.onclick = function(){
+            fetch('http://127.0.0.1:5000/endcollection')
+            clearInterval(refreshIntervalId)
+
+        }
+        
+        var viewconfig = document.getElementById('Configurations')
+        viewconfig.onclick = function(){
+            location.href = ('http://127.0.0.1:5000/viewconfig')
+        }
+        var config = document.getElementById('config')
+        config.onclick = function(){
+            location.href = ('http://127.0.0.1:5000/config')
+        }
+        var graph = document.getElementById('graph')
+        graph.onclick = function(){
+            location.href = ('http://127.0.0.1:5000/graph')
+        }
+
+        var exportdata = document.getElementById('export')
+        exportdata.onclick = function(){
+            location.href = ('http://127.0.0.1:5000/exportdata')
+        }
+           
+    </script>
+</html>

@@ -1,0 +1,90 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-gH2yIJqKdNHPEq0n4Mqa/HGKIhSkIHeL5AyhkYV8i59U5AR6csBvApHHNl/vI1Bx" crossorigin="anonymous">
+        <link rel="stylesheet" type = "text/css" href="{{ url_for('static', filename='styles/style.css')}}">
+    </head>
+    <body>
+        <div id = "top"><h1>Configurations</h1>
+            <div id = "buttonsdiv">
+            <button id="Configurations" class = 'relocate'>View Configurations</button>
+            <button id="config" class = 'relocate'>Change Configurations</button>
+            <button id="graph" class = 'relocate'>Graph</button>
+            <button id="export" class = 'relocate'>Export Data</button>
+        </div></div>
+        <h2>Labjack Information</h2>
+        <div id = "labjackinfo"></div>
+        <div id = "portsinfo"><h2>Current Ports</h3></div>
+        <div id = "pastports"><h2>Past Ports</h3>
+        <table id = "pastportstable">
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Port</th>
+                <th>Units</th>
+                <th>m</th>
+                <th>b</th>
+            </tr>
+        </table>
+        </div>
+
+
+    </body>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-A3rJD856KowSb7dwlZdYEkO39Gagi7vIsF0jrRAoQmDKKtQBHUuLZ9AsSv4jD4Xa" crossorigin="anonymous"></script>
+    <script>
+        fetch('http://127.0.0.1:5000/getconfigsettings')
+        .then(function(response)
+        {return response.json();})
+        .then(function(text){
+       
+            var ljinfo = document.getElementById('labjackinfo')
+            ljinfo.innerHTML = `Model: ${text['model']}<br>Scans Per Second: ${text['scanspersecond']}`
+            ports = text['ports']
+            for (let i = 0;i<ports.length;i++){
+                var div = document.createElement('div')
+                div.classList.add('port')
+                div.innerHTML = `Name: ${text['ports'][i]['name']}<br>Port: ${text['ports'][i]['port']}<br>Units: ${text['ports'][i]['units']}<br><i>Calibrations</i><br>m: ${text['ports'][i]['m']}<br>b: ${text['ports'][i]['b']}`
+                document.getElementById('portsinfo').appendChild(div)
+            }
+            
+
+        })
+
+        fetch('http://127.0.0.1:5000/pastports')
+        .then(function(response)
+        {return response.json();})
+        .then(function(text){
+       
+            var pastportstable = document.getElementById('pastportstable')
+            ports = text['ports']
+            for (let i = 0;i<ports.length;i++){
+                var tr = document.createElement('tr')
+                tr.innerHTML = `<tr><td>${text['ports'][i]['id']}</td><td>${text['ports'][i]['name']}</td><td>${text['ports'][i]['port']}</td><td>${text['ports'][i]['units']}</td><td>${text['ports'][i]['m']}</td><td>${text['ports'][i]['b']}</td></tr>`                
+                document.getElementById('pastportstable').appendChild(tr)
+            }
+            
+
+        })
+
+
+
+        var viewconfig = document.getElementById('Configurations')
+        viewconfig.onclick = function(){
+            location.href = ('http://127.0.0.1:5000/viewconfig')
+        }
+        var config = document.getElementById('config')
+        config.onclick = function(){
+            location.href = ('http://127.0.0.1:5000/config')
+        }
+        var graph = document.getElementById('graph')
+        graph.onclick = function(){
+            location.href = ('http://127.0.0.1:5000/graph')
+        }
+
+        var exportdata = document.getElementById('export')
+        exportdata.onclick = function(){
+            location.href = ('http://127.0.0.1:5000/exportdata')
+        }
+    </script>
+</html>

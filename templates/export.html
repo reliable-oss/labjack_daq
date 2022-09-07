@@ -1,0 +1,152 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-gH2yIJqKdNHPEq0n4Mqa/HGKIhSkIHeL5AyhkYV8i59U5AR6csBvApHHNl/vI1Bx" crossorigin="anonymous">
+        <link rel="stylesheet" type = "text/css" href="{{ url_for('static', filename='styles/style.css')}}">
+    </head>
+    <body>
+        <div id = "top"><h1>Export Data</h1>
+            <div id = "buttonsdiv">
+            <button id="Configurations" class = 'relocate'>View Configurations</button>
+            <button id="config" class = 'relocate'>Change Configurations</button>
+            <button id="graph" class = 'relocate'>Graph</button>
+            <button id="export" class = 'relocate'>Export Data</button>
+        </div></div>
+        <h2>Export data to a CSV file</h2>
+        <div id = "insertinfo">
+            <label for="inputid">Input id:</label>
+            <input type = "number" name = "inputid" id = "inputid">
+
+            <label for="filename">File Name (automatically adds .csv):</label>
+            <input type = "text" name = "filename" id = "filename">
+
+            <div>
+            <label for="starttime">Enter the start time:</label>
+            <input type = "datetime-local" step="1" name = "starttime" id = "starttime">
+            </div>
+            <div>
+            <label for="endtime">Enter the end-time:</label>
+                
+            <input type = "datetime-local" step="1" name = "endtime" id = "endtime">
+            </div>
+            <div class = "error"></div>
+            <button class="submit" id = "exportdata">Export Data</button>
+
+        </div>
+        
+        <div id = "pastports"><h2>All Ports</h3>
+        <table id = "pastportstable">
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Port</th>
+                <th>Units</th>
+                <th>m</th>
+                <th>b</th>
+            </tr>
+        </table>
+        </div>
+
+
+    </body>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-A3rJD856KowSb7dwlZdYEkO39Gagi7vIsF0jrRAoQmDKKtQBHUuLZ9AsSv4jD4Xa" crossorigin="anonymous"></script>
+    <script>
+        
+
+        var submitbutton = document.getElementById("exportdata")
+
+        submitbutton.onclick = function(){
+            errorstatement("")
+            var filename,inputid,endtime,starttime
+            function definevariables(){
+            filename = document.getElementById("filename").value
+            inputid = document.getElementById("inputid").value
+            endtime = (Date.parse(document.getElementById("endtime").value))/1000;
+            starttime = (Date.parse(document.getElementById("starttime").value))/1000;
+
+            
+            
+            if (endtime==""){endtime=0}
+            if (starttime==""){starttime=0}
+            if (endtime<starttime){
+                errorstatement("Start time must be before end time")
+            }
+            else{
+                exportdata(filename,inputid,endtime,starttime)
+            }}
+            definevariables()
+
+            
+
+            function exportdata(filename,inputid,endtime,starttime)
+            {if(filename!=""&&inputid!=""){
+                fetch(`http://127.0.0.1:5000/exportdataid?portid=${inputid}&filename=${filename}&starttime=${starttime}&endtime=${endtime}`)
+                .then(function(response)
+                    {
+                        if(!response.ok){
+                            errorstatement("Invalid Input ID")
+                            return
+                        }
+                        else
+                        {
+                            return response.blob();
+                        }})
+                .then(function(data) {
+                    var a = document.createElement("a");
+                    a.href = window.URL.createObjectURL(data);
+                    a.download = `${filename}.csv`;
+                    a.click();
+                }) 
+            }
+            else{
+                errorstatement("Must fill out Input ID and File Name")
+            }}
+
+
+        }
+
+        // fetch(`http://127.0.0.1:5000/exportdataid?portid=${inputid}&filename=${filename}`)
+        // .then(function(response)
+        // {return response.json();})
+        // .then(function(text){})
+
+        fetch('http://127.0.0.1:5000/pastports')
+        .then(function(response)
+        {return response.json();})
+        .then(function(text){
+       
+            var pastportstable = document.getElementById('pastportstable')
+            ports = text['ports']
+            for (let i = 0;i<ports.length;i++){
+                var tr = document.createElement('tr')
+                tr.innerHTML = `<tr><td>${text['ports'][i]['id']}</td><td>${text['ports'][i]['name']}</td><td>${text['ports'][i]['port']}</td><td>${text['ports'][i]['units']}</td><td>${text['ports'][i]['m']}</td><td>${text['ports'][i]['b']}</td></tr>`                
+                document.getElementById('pastportstable').appendChild(tr)
+            }
+            
+
+        })
+        function errorstatement(errorstr){
+            var error = document.getElementsByClassName('error')[0]
+            error.innerHTML =  errorstr
+        }
+
+        var viewconfig = document.getElementById('Configurations')
+        viewconfig.onclick = function(){
+            location.href = ('http://127.0.0.1:5000/viewconfig')
+        }
+        var config = document.getElementById('config')
+        config.onclick = function(){
+            location.href = ('http://127.0.0.1:5000/config')
+        }
+        var graph = document.getElementById('graph')
+        graph.onclick = function(){
+            location.href = ('http://127.0.0.1:5000/graph')
+        }
+
+        var exportdata = document.getElementById('export')
+        exportdata.onclick = function(){
+            location.href = ('http://127.0.0.1:5000/exportdata')
+        }
+    </script>
+</html>
